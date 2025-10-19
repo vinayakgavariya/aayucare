@@ -33,24 +33,12 @@ export default function LanguageToggle({
     <div className="relative">
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors"
+        className="flex items-center gap-2 px-4 py-2 bg-white border-3 border-orange-300 rounded-xl hover:bg-orange-50 transition-all shadow-md hover:shadow-lg"
       >
+        <span className="text-2xl">🌐</span>
+        <span className="font-bold text-gray-800">{selectedLang.nativeName}</span>
         <svg
-          className="w-5 h-5 text-gray-600"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            strokeWidth={2}
-            d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"
-          />
-        </svg>
-        <span className="font-medium text-gray-700">{selectedLang.nativeName}</span>
-        <svg
-          className={`w-4 h-4 text-gray-600 transition-transform ${
+          className={`w-4 h-4 text-orange-600 transition-transform ${
             isOpen ? "rotate-180" : ""
           }`}
           fill="none"
@@ -67,7 +55,7 @@ export default function LanguageToggle({
           <div className="fixed inset-0 z-10" onClick={() => setIsOpen(false)} />
 
           {/* Dropdown */}
-          <div className="absolute right-0 mt-2 w-56 bg-white border border-gray-200 rounded-lg shadow-lg z-20 max-h-96 overflow-y-auto">
+          <div className="absolute right-0 mt-2 w-64 bg-white border-4 border-orange-200 rounded-2xl shadow-2xl z-20 max-h-96 overflow-y-auto">
             {languages.map((lang) => (
               <button
                 key={lang.code}
@@ -75,12 +63,12 @@ export default function LanguageToggle({
                   onLanguageChange(lang.code);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-4 py-3 hover:bg-gray-50 transition-colors first:rounded-t-lg last:rounded-b-lg ${
-                  lang.code === selectedLanguage ? "bg-blue-50 text-blue-700" : "text-gray-700"
+                className={`w-full text-left px-4 py-3 hover:bg-orange-50 transition-colors first:rounded-t-xl last:rounded-b-xl border-b border-orange-100 last:border-b-0 ${
+                  lang.code === selectedLanguage ? "bg-gradient-to-r from-orange-100 to-green-100 text-orange-800 font-bold" : "text-gray-700"
                 }`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="font-medium">{lang.nativeName}</span>
+                  <span className="font-medium text-lg">{lang.nativeName}</span>
                   <span className="text-sm text-gray-500">{lang.name}</span>
                 </div>
               </button>

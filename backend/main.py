@@ -41,6 +41,7 @@ class TranscribeRequest(BaseModel):
     audio_base64: str
     encoding: str = "audio/wav"
     sample_rate: int = 16000
+    language: str = "en-IN"  # Default to English India
 
 
 class FindDoctorsRequest(BaseModel):
@@ -80,8 +81,8 @@ async def transcribe_audio(request: TranscribeRequest):
             f"[Debug]: Encoding: {request.encoding}, Sample rate: {request.sample_rate}"
         )
 
-        # Sarvam AI WebSocket URL for STT
-        ws_url = "wss://api.sarvam.ai/speech-to-text/ws?language-code=en-IN&model=saarika:v2.5"
+        # Sarvam AI WebSocket URL for STT with dynamic language
+        ws_url = f"wss://api.sarvam.ai/speech-to-text/ws?language-code={request.language}&model=saarika:v2.5"
 
         # WebSocket subprotocol with API key
         subprotocol = f"api-subscription-key.{SARVAM_API_KEY}"
@@ -163,27 +164,27 @@ async def find_doctors(request: FindDoctorsRequest):
         if request.language.lower() != "english":
             language_instruction = f"Respond in {request.language}."
 
-        prompt = f"""
-You are a medical assistant helping users find the right doctor.
+        prompt = f"""You are a helpful medical assistant for rural India. Be concise and focused.
 
 User query: "{request.symptom_text}"
 
-Tasks:
-1. Extract the location from the user's query (city, area, or place name)
-2. Identify the appropriate doctor specialization needed for these symptoms
-3. Provide a brief explanation of why this specialist is needed
-4. Find verified clinics, hospitals, or doctors near the mentioned location
-5. Provide contact information if available
+Instructions:
+1. Identify the medical specialization needed (e.g., General Physician, Cardiologist, Dermatologist)
+2. Give ONE brief sentence explaining why this specialist is needed
+3. Extract location (city, state) from user's query
+4. Find doctors/clinics near that location using Google Maps
+5. If the exact location has few results, also search in nearby major cities in the same state
 
 {language_instruction}
 
-Important: The user will mention their location in their query. Use that location to find nearby doctors.
-If no location is mentioned, ask them to specify their location.
+Response format:
+- Start with specialization: "You need a [Specialist Name]"
+- One sentence explanation
+- DO NOT include general health advice or home remedies
+- DO NOT ask follow-up questions
+- Focus ONLY on finding the right doctor
 
-Format your response clearly with:
-- Specialization needed
-- Brief explanation
-- List of recommended doctors/clinics near the mentioned location
+If location is missing, say: "Please mention your city and state (e.g., Nagpur, Maharashtra)"
 """
 
         # Call Gemini with Google Maps grounding (it will extract location from the query)
