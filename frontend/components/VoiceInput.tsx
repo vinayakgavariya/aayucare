@@ -117,7 +117,7 @@ export default function VoiceInput({
       const int16Data = float32ToInt16(audioChunksRef.current);
       
       // Convert Int16Array to base64
-      const blob = new Blob([int16Data], { type: "audio/wav" });
+      const blob = new Blob([int16Data.buffer], { type: "audio/wav" });
       const reader = new FileReader();
       reader.readAsDataURL(blob);
 
