@@ -1,14 +1,40 @@
 "use client";
 
-import { useState } from "react";
-import MapWidget from "./MapWidget";
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { MapPin, ExternalLink, ChevronLeft } from "lucide-react";
+import { useLanguage } from "@/lib/useLanguage";
+
+// Utility to strip markdown formatting
+const stripMarkdown = (text: string): string => {
+  return text
+    .replace(/\*\*(.+?)\*\*/g, '$1')  // Remove bold **text**
+    .replace(/\*(.+?)\*/g, '$1')      // Remove italic *text*
+    .replace(/`(.+?)`/g, '$1')        // Remove code `text`
+    .replace(/#{1,6}\s/g, '')         // Remove headers
+    .replace(/\[(.+?)\]\(.+?\)/g, '$1') // Remove links
+    .trim();
+};
 
 interface Doctor {
   name: string;
   address?: string;
   uri?: string;
   place_id?: string;
+  rating?: number;
+  user_ratings_total?: number;
+  distance_meters?: number;
+  reviews?: string[];
 }
+
+// Utility to format distance
+const formatDistance = (meters?: number): string => {
+  if (!meters) return "";
+  if (meters < 1000) {
+    return `${Math.round(meters)}m away`;
+  }
+  return `${(meters / 1000).toFixed(1)}km away`;
+};
 
 interface ResultsPageProps {
   results: {
@@ -16,20 +42,89 @@ interface ResultsPageProps {
     doctors: Doctor[];
     symptom_text: string;
   };
-  language: string;
   userLocation: { lat: number; lng: number } | null;
   onBack: () => void;
 }
 
 export default function ResultsPage({
   results,
-  language,
   userLocation,
   onBack,
 }: ResultsPageProps) {
   const [activeTab, setActiveTab] = useState<"doctors" | "labs" | "pharmacies">("doctors");
   const [additionalResults, setAdditionalResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const { currentLanguage, translateText } = useLanguage();
+  const [uiText, setUiText] = useState({
+    backToSearch: "Back to Search",
+    yourSearch: "Your search",
+    doctors: "Doctors",
+    labs: "Labs",
+    pharmacies: "Pharmacies",
+    results: "Results",
+    nearbyLabs: "Nearby Labs",
+    nearbyPharmacies: "Nearby Pharmacies",
+    viewOnMaps: "Show Location",
+    reviews: "reviews",
+    away: "away",
+    noResults: "No results found for this category",
+    clickTab: "Click on Labs or Pharmacies tab to search.",
+  });
+
+  // Translate UI text when language changes
+  useEffect(() => {
+    const translateUI = async () => {
+      if (currentLanguage === 'english') {
+        setUiText({
+          backToSearch: "Back to Search",
+          yourSearch: "Your search",
+          doctors: "Doctors",
+          labs: "Labs",
+          pharmacies: "Pharmacies",
+          results: "Results",
+          nearbyLabs: "Nearby Labs",
+          nearbyPharmacies: "Nearby Pharmacies",
+          viewOnMaps: "Show Location",
+          reviews: "reviews",
+          away: "away",
+          noResults: "No results found for this category",
+          clickTab: "Click on Labs or Pharmacies tab to search.",
+        });
+      } else {
+        const backToSearch = await translateText("Back to Search");
+        const yourSearch = await translateText("Your search");
+        const doctors = await translateText("Doctors");
+        const labs = await translateText("Labs");
+        const pharmacies = await translateText("Pharmacies");
+        const results = await translateText("Results");
+        const nearbyLabs = await translateText("Nearby Labs");
+        const nearbyPharmacies = await translateText("Nearby Pharmacies");
+        const viewOnMaps = await translateText("Show Location");
+        const reviews = await translateText("reviews");
+        const away = await translateText("away");
+        const noResults = await translateText("No results found for this category");
+        const clickTab = await translateText("Click on Labs or Pharmacies tab to search.");
+
+        setUiText({
+          backToSearch,
+          yourSearch,
+          doctors,
+          labs,
+          pharmacies,
+          results,
+          nearbyLabs,
+          nearbyPharmacies,
+          viewOnMaps,
+          reviews,
+          away,
+          noResults,
+          clickTab,
+        });
+      }
+    };
+
+    translateUI();
+  }, [currentLanguage, translateText]);
 
   const fetchFacilities = async (facilityType: string) => {
     setIsLoading(true);
@@ -37,7 +132,9 @@ export default function ResultsPage({
       const formData = new FormData();
       formData.append("facility_type", facilityType);
       formData.append("location", results.symptom_text); // Use the original query which contains location
-      formData.append("language", language);
+      formData.append("language", "english"); // Default language
+
+      console.log(`[Frontend] Fetching ${facilityType}s for location:`, results.symptom_text);
 
       const response = await fetch(
         `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000"}/find-facilities`,
@@ -49,7 +146,10 @@ export default function ResultsPage({
 
       if (response.ok) {
         const data = await response.json();
+        console.log(`[Frontend] Received ${facilityType}s:`, data);
         setAdditionalResults(data);
+      } else {
+        console.error(`[Frontend] Failed to fetch ${facilityType}s:`, response.status);
       }
     } catch (error) {
       console.error("Error fetching facilities:", error);
@@ -68,148 +168,160 @@ export default function ResultsPage({
   };
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Back Button */}
-      <button
+      <motion.button
+        whileHover={{ x: -4 }}
+        whileTap={{ scale: 0.95 }}
         onClick={onBack}
-        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
+        className="flex items-center gap-2 text-gray-600 hover:text-gray-900 text-sm font-medium transition-colors group"
       >
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-        </svg>
-        Back to Search
-      </button>
+        <motion.div
+          whileHover={{ x: -2 }}
+          transition={{ type: "spring", stiffness: 400 }}
+        >
+          <ChevronLeft className="w-4 h-4 group-hover:text-gray-900" />
+        </motion.div>
+        <span>← {uiText.backToSearch}</span>
+      </motion.button>
 
       {/* Symptom Display */}
-      <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="font-semibold text-blue-900 mb-2">Your Symptoms:</h3>
-        <p className="text-gray-700">{results.symptom_text}</p>
-      </div>
+      <motion.div
+        initial={{ opacity: 0, y: -10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.4 }}
+        className="bg-gradient-to-r from-gray-50 to-gray-100 border border-gray-200 rounded-xl p-6 shadow-sm"
+      >
+        <p className="text-xs font-medium text-gray-500 mb-2 uppercase tracking-wide">{uiText.yourSearch}</p>
+        <p className="text-gray-900 font-medium">{results.symptom_text}</p>
+      </motion.div>
 
       {/* Tabs */}
-      <div className="flex gap-2 border-b border-gray-200">
+      <div className="flex gap-1 border-b border-gray-200">
         <button
           onClick={() => handleTabChange("doctors")}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-5 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "doctors"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-600 hover:text-gray-900"
+              ? "text-gray-900 border-b-2 border-gray-900"
+              : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          Doctors
+          {uiText.doctors}
         </button>
         <button
           onClick={() => handleTabChange("labs")}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-5 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "labs"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-600 hover:text-gray-900"
+              ? "text-gray-900 border-b-2 border-gray-900"
+              : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          Labs
+          {uiText.labs}
         </button>
         <button
           onClick={() => handleTabChange("pharmacies")}
-          className={`px-6 py-3 font-medium transition-colors ${
+          className={`px-5 py-2.5 text-sm font-medium transition-colors ${
             activeTab === "pharmacies"
-              ? "text-blue-600 border-b-2 border-blue-600"
-              : "text-gray-600 hover:text-gray-900"
+              ? "text-gray-900 border-b-2 border-gray-900"
+              : "text-gray-500 hover:text-gray-700"
           }`}
         >
-          Pharmacies
+          {uiText.pharmacies}
         </button>
       </div>
 
       {/* Content */}
-      <div className="grid md:grid-cols-2 gap-6">
+      <div className="max-w-4xl">
         {/* Recommendation & List */}
         <div className="space-y-6">
           {activeTab === "doctors" && (
             <>
-              {/* AI Recommendation */}
-              <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                  <svg
-                    className="w-6 h-6 text-green-600"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-                    />
-                  </svg>
-                  Recommendation
-                </h3>
-                <div className="prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-                  {results.recommendation}
-                </div>
-              </div>
-
               {/* Doctors List */}
               {results.doctors && results.doctors.length > 0 && (
-                <div className="bg-white p-6 rounded-xl shadow-lg border border-gray-200">
-                  <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    Nearby Doctors & Clinics
-                  </h3>
-                  <div className="space-y-4">
+                <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
+                  <div className="p-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
+                    <h3 className="text-sm font-semibold text-gray-700">
+                      {uiText.results} ({results.doctors.length})
+                    </h3>
+                  </div>
+                  <div className="divide-y divide-gray-200">
                     {results.doctors.map((doctor, index) => (
-                      <div
+                      <motion.div
                         key={index}
-                        className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                        initial={{ opacity: 0, x: -20 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: index * 0.1, duration: 0.4 }}
+                        whileHover={{ x: 4, backgroundColor: "rgba(249, 250, 251, 1)" }}
+                        className="p-6 transition-all duration-300 cursor-pointer group"
                       >
-                        <h4 className="font-semibold text-gray-900 mb-2">{doctor.name}</h4>
-                        {doctor.address && (
-                          <p className="text-sm text-gray-600 mb-2 flex items-start gap-2">
-                            <svg
-                              className="w-4 h-4 mt-0.5 flex-shrink-0"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
+                        <div className="space-y-3">
+                          <div>
+                            <div className="flex items-start justify-between gap-3 mb-2">
+                              <h4 className="font-semibold text-gray-900 group-hover:text-gray-700 transition-colors flex-1">
+                                {doctor.name}
+                              </h4>
+                              {doctor.distance_meters && (
+                                <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full whitespace-nowrap">
+                                  {formatDistance(doctor.distance_meters)}
+                                </span>
+                              )}
+                            </div>
+
+                            {/* Rating Section */}
+                             {doctor.rating && (
+                               <div className="flex items-center gap-2 mb-2">
+                                 <div className="flex items-center gap-1">
+                                   <span className="text-yellow-500 text-sm">★</span>
+                                   <span className="text-sm font-medium text-gray-900">
+                                     {doctor.rating.toFixed(1)}
+                                   </span>
+                                 </div>
+                                 {doctor.user_ratings_total && (
+                                   <span className="text-xs text-gray-500">
+                                     ({doctor.user_ratings_total.toLocaleString()} {uiText.reviews})
+                                   </span>
+                                 )}
+                               </div>
+                             )}
+
+                             {/* User Reviews */}
+                             {doctor.reviews && doctor.reviews.length > 0 && (
+                               <div className="mb-3 space-y-2">
+                                 {doctor.reviews.map((review, reviewIdx) => (
+                                   <div
+                                     key={reviewIdx}
+                                     className="bg-gray-50 rounded-lg p-3 border border-gray-100"
+                                   >
+                                     <p className="text-xs text-gray-600 italic leading-relaxed">
+                                       "{review}"
+                                     </p>
+                                   </div>
+                                 ))}
+                               </div>
+                             )}
+
+                             {doctor.address && (
+                              <p className="text-sm text-gray-600 flex items-start gap-2">
+                                <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400 group-hover:text-gray-600 transition-colors" />
+                                {doctor.address}
+                              </p>
+                            )}
+                          </div>
+
+                          {doctor.uri && (
+                            <motion.a
+                              whileHover={{ x: 4 }}
+                              href={doctor.uri}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors"
                             >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                              />
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"
-                              />
-                            </svg>
-                            {doctor.address}
-                          </p>
-                        )}
-                        {doctor.uri && (
-                          <a
-                            href={doctor.uri}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
-                          >
-                            View on Google Maps
-                            <svg
-                              className="w-4 h-4"
-                              fill="none"
-                              stroke="currentColor"
-                              viewBox="0 0 24 24"
-                            >
-                              <path
-                                strokeLinecap="round"
-                                strokeLinejoin="round"
-                                strokeWidth={2}
-                                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                              />
-                            </svg>
-                          </a>
-                        )}
-                      </div>
+                              <ExternalLink className="w-4 h-4" />
+                              {uiText.viewOnMaps}
+                            </motion.a>
+                          )}
+                        </div>
+                      </motion.div>
                     ))}
                   </div>
                 </div>
@@ -245,84 +357,81 @@ export default function ResultsPage({
               ) : additionalResults ? (
                 <>
                   <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                    Nearby {activeTab === "labs" ? "Labs" : "Pharmacies"}
+                    {activeTab === "labs" ? uiText.nearbyLabs : uiText.nearbyPharmacies}
                   </h3>
-                  {additionalResults.recommendation && (
-                    <div className="mb-6 prose prose-sm max-w-none text-gray-700 whitespace-pre-wrap">
-                      {additionalResults.recommendation}
-                    </div>
-                  )}
-                  {additionalResults.facilities && additionalResults.facilities.length > 0 && (
+                  {additionalResults.facilities && additionalResults.facilities.length > 0 ? (
                     <div className="space-y-4">
                       {additionalResults.facilities.map((facility: any, index: number) => (
-                        <div
+                        <motion.div
                           key={index}
-                          className="border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow"
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1 }}
+                          className="border border-gray-200 rounded-lg p-4 hover:shadow-md hover:border-gray-300 transition-all"
                         >
-                          <h4 className="font-semibold text-gray-900 mb-2">{facility.name}</h4>
-                          {facility.address && (
+                          <div className="flex items-start justify-between gap-3 mb-2">
+                            <h4 className="font-semibold text-gray-900 flex-1">{facility.name}</h4>
+                            {facility.distance_meters && (
+                              <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded-full whitespace-nowrap">
+                                {formatDistance(facility.distance_meters)}
+                              </span>
+                            )}
+                          </div>
+
+                           {/* Rating Section */}
+                           {facility.rating && (
+                             <div className="flex items-center gap-2 mb-2">
+                               <div className="flex items-center gap-1">
+                                 <span className="text-yellow-500 text-sm">★</span>
+                                 <span className="text-sm font-medium text-gray-900">
+                                   {facility.rating.toFixed(1)}
+                                 </span>
+                               </div>
+                               {facility.user_ratings_total && (
+                                 <span className="text-xs text-gray-500">
+                                   ({facility.user_ratings_total.toLocaleString()} {uiText.reviews})
+                                 </span>
+                               )}
+                             </div>
+                           )}
+
+                           {facility.address && (
                             <p className="text-sm text-gray-600 mb-2 flex items-start gap-2">
-                              <svg
-                                className="w-4 h-4 mt-0.5 flex-shrink-0"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"
-                                />
-                              </svg>
+                              <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-gray-400" />
                               {facility.address}
                             </p>
                           )}
                           {facility.uri && (
-                            <a
+                            <motion.a
+                              whileHover={{ x: 4 }}
                               href={facility.uri}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-sm text-blue-600 hover:text-blue-700 font-medium inline-flex items-center gap-1"
+                              className="text-sm text-gray-700 hover:text-gray-900 font-medium inline-flex items-center gap-1 transition-colors"
                             >
-                              View on Google Maps
-                              <svg
-                                className="w-4 h-4"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                              >
-                                <path
-                                  strokeLinecap="round"
-                                  strokeLinejoin="round"
-                                  strokeWidth={2}
-                                  d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"
-                                />
-                              </svg>
-                            </a>
+                              <ExternalLink className="w-4 h-4" />
+                              {uiText.viewOnMaps}
+                            </motion.a>
                           )}
-                        </div>
+                        </motion.div>
                       ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <p className="text-sm">{uiText.noResults}</p>
                     </div>
                   )}
                 </>
-              ) : null}
+              ) : (
+                <div className="text-center py-8 text-gray-400">
+                  <p className="text-sm">{uiText.clickTab}</p>
+                </div>
+              )}
             </div>
           )}
         </div>
-
-        {/* Map Widget */}
-        <div className="sticky top-4">
-          <MapWidget
-            doctors={
-              activeTab === "doctors"
-                ? results.doctors
-                : additionalResults?.facilities || []
-            }
-            userLocation={userLocation}
-          />
-        </div>
       </div>
+
     </div>
   );
 }
