@@ -295,14 +295,6 @@ MIT License - See LICENSE file for details
 
 Built with ❤️ for rural healthcare access
 
-## 🙏 Acknowledgments
-
-- [Sarvam AI
-](https: //www.sarvam.ai/) for Speech-to-Text API
-- [Google Gemini
-](https: //ai.google.dev/) for AI capabilities
-- [Google Maps
-](https: //developers.google.com/maps) for location services
 
 ## 📞 Support
 
