@@ -42,7 +42,7 @@ AayuCare provides:
 - Python 3.11+
 - API Keys:
   - [Sarvam AI API Key
-](https: //www.sarvam.ai/)
+](https: //dashboard.sarvam.ai/)
   - [Google Gemini API Key
 ](https: //ai.google.dev/)
   - [Google Maps API Key
