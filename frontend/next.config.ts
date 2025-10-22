@@ -3,15 +3,11 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   /* config options here */
   reactStrictMode: true,
-  swcMinify: true,
   
   // Image optimization
   images: {
     domains: ['maps.googleapis.com', 'maps.google.com'],
   },
-  
-  // Performance optimizations
-  compress: true,
   
   // Security headers
   async headers() {
@@ -30,6 +26,10 @@ const nextConfig: NextConfig = {
           {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
+          },
+          {
+            key: 'Permissions-Policy',
+            value: 'microphone=*, camera=*, geolocation=*',
           },
         ],
       },
