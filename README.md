@@ -2,11 +2,6 @@
 
 **Help rural and non-English-speaking users find the right doctors, nearby labs, and pharmacies using voice or text input without requiring login.**
 
-![AayuCare
-](https: //img.shields.io/badge/Status-Production%20Ready-green)
-![License
-](https: //img.shields.io/badge/License-MIT-blue)
-
 ## 🎯 Problem Statement
 
 - People in rural areas often visit the wrong doctor due to poor awareness
