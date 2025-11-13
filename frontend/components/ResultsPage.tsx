@@ -16,6 +16,47 @@ const stripMarkdown = (text: string): string => {
     .trim();
 };
 
+// Parse doctors from recommendation text
+const parseDoctorsFromText = (text: string): Doctor[] => {
+  if (!text) return [];
+  
+  const doctors: Doctor[] = [];
+  // Split by ** to find doctor entries
+  const lines = text.split('\n');
+  
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i].trim();
+    
+    // Match pattern: **Doctor Name:** Location info. Rating and reviews.
+    const doctorMatch = line.match(/\*\*(.+?):\*\*/);
+    if (doctorMatch) {
+      const name = doctorMatch[1].trim();
+      const restOfLine = line.substring(doctorMatch[0].length);
+      
+      // Extract location (everything before rating info)
+      const locationMatch = restOfLine.match(/(.+?)(?:उन्हें|They have|Rating)/i);
+      const address = locationMatch ? locationMatch[1].replace(/में स्थित हैं|located at/gi, '').trim().replace(/\.$/, '') : '';
+      
+      // Extract rating: "4.9 स्टार" or "4.9 stars"
+      const ratingMatch = restOfLine.match(/(\d+\.?\d*)\s*(?:स्टार|stars)/i);
+      const rating = ratingMatch ? parseFloat(ratingMatch[1]) : undefined;
+      
+      // Extract review count: "700 समीक्षाओं" or "700 reviews"
+      const reviewMatch = restOfLine.match(/(\d+)\s*(?:समीक्षाओं|reviews)/i);
+      const user_ratings_total = reviewMatch ? parseInt(reviewMatch[1]) : undefined;
+      
+      doctors.push({
+        name,
+        address: address || undefined,
+        rating,
+        user_ratings_total,
+      });
+    }
+  }
+  
+  return doctors;
+};
+
 interface Doctor {
   name: string;
   address?: string;
@@ -55,6 +96,22 @@ export default function ResultsPage({
   const [additionalResults, setAdditionalResults] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { currentLanguage, translateText } = useLanguage();
+  
+  // Merge structured doctors with parsed doctors from text
+  const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
+  
+  useEffect(() => {
+    // Start with structured doctors from API
+    let doctorsList = [...(results.doctors || [])];
+    
+    // If no structured doctors, parse from recommendation text
+    if (doctorsList.length === 0 && results.recommendation) {
+      const parsedDoctors = parseDoctorsFromText(results.recommendation);
+      doctorsList = parsedDoctors;
+    }
+    
+    setAllDoctors(doctorsList);
+  }, [results]);
   const [uiText, setUiText] = useState({
     backToSearch: "Back to Search",
     yourSearch: "Your search",
@@ -62,6 +119,7 @@ export default function ResultsPage({
     labs: "Labs",
     pharmacies: "Pharmacies",
     results: "Results",
+    recommendation: "Recommendation",
     nearbyLabs: "Nearby Labs",
     nearbyPharmacies: "Nearby Pharmacies",
     viewOnMaps: "Show Location",
@@ -82,6 +140,7 @@ export default function ResultsPage({
           labs: "Labs",
           pharmacies: "Pharmacies",
           results: "Results",
+          recommendation: "Recommendation",
           nearbyLabs: "Nearby Labs",
           nearbyPharmacies: "Nearby Pharmacies",
           viewOnMaps: "Show Location",
@@ -97,6 +156,7 @@ export default function ResultsPage({
         const labs = await translateText("Labs");
         const pharmacies = await translateText("Pharmacies");
         const results = await translateText("Results");
+        const recommendation = await translateText("Recommendation");
         const nearbyLabs = await translateText("Nearby Labs");
         const nearbyPharmacies = await translateText("Nearby Pharmacies");
         const viewOnMaps = await translateText("Show Location");
@@ -112,6 +172,7 @@ export default function ResultsPage({
           labs,
           pharmacies,
           results,
+          recommendation,
           nearbyLabs,
           nearbyPharmacies,
           viewOnMaps,
@@ -237,15 +298,15 @@ export default function ResultsPage({
           {activeTab === "doctors" && (
             <>
               {/* Doctors List */}
-              {results.doctors && results.doctors.length > 0 && (
+              {allDoctors && allDoctors.length > 0 && (
                 <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-300">
                   <div className="p-5 bg-gradient-to-r from-gray-50 to-gray-100 border-b border-gray-200">
                     <h3 className="text-sm font-semibold text-gray-700">
-                      {uiText.results} ({results.doctors.length})
+                      {uiText.results} ({allDoctors.length})
                     </h3>
                   </div>
                   <div className="divide-y divide-gray-200">
-                    {results.doctors.map((doctor, index) => (
+                    {allDoctors.map((doctor, index) => (
                       <motion.div
                         key={index}
                         initial={{ opacity: 0, x: -20 }}
@@ -308,10 +369,15 @@ export default function ResultsPage({
                             )}
                           </div>
 
-                          {doctor.uri && (
+                          {(doctor.uri || doctor.name) && (
                             <motion.a
                               whileHover={{ x: 4 }}
-                              href={doctor.uri}
+                              href={
+                                doctor.uri || 
+                                `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
+                                  `${doctor.name}${doctor.address ? ' ' + doctor.address : ''}`
+                                )}`
+                              }
                               target="_blank"
                               rel="noopener noreferrer"
                               className="inline-flex items-center gap-2 text-sm text-gray-700 hover:text-gray-900 font-medium transition-colors"

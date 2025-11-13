@@ -351,7 +351,7 @@ export default function ChatInterface({
 
   const addMessage = (type: "user" | "assistant" | "system", content: string) => {
     const newMessage: Message = {
-      id: Date.now().toString(),
+      id: `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
       content,
       timestamp: new Date(),
@@ -402,10 +402,11 @@ export default function ChatInterface({
         return; // Don't proceed further
       }
 
-      // Show doctors
-      if (data.doctors && data.doctors.length > 0) {
+      // Show results if we have a recommendation (even if doctors array is empty)
+      if (data.recommendation) {
         onDoctorsFound({
           ...data,
+          doctors: data.doctors || [], // Ensure doctors is always an array
           symptom_text: queryText,
         });
       } else if (!data.needs_location) {
